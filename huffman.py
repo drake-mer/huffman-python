@@ -1,5 +1,6 @@
 import sys
 import pprint
+import copy
 
 class Node:
     
@@ -9,55 +10,34 @@ class Node:
         self.right = None
 
 
-
     def __repr__(self):
         return ("'{}'-----'{}'\n      |"
         "        \n").format(self.content,self.left.content)
 
 
-
-    def getLeftNode(self):
-        return self.left
-    
-    
-    def getRightNode(self):
-        return self.right
-
-
-
-class Tree:
-    def __init__(self, rootNode = None):
-        self.rootNode=Node('')
-        self.curNode=self.rootNode
-
-
-
-    def __repr__(self):
-       curNode = self.rootNode
-       output = ''
-       while curNode.left is not None and curNode.right is not None:
-            output+=str(curNode)
-            curNode = curNode.right
-       return output
-
-
-    def buildNode(self, key):
-        if self.curNode.left is None:
-                self.curNode.left = Node( key )
-        elif self.curNode.right is None:
-                self.curNode.right = Node( key )
+    def getCode(self, codeMap, codeList=[]):
+        if self.content[1] == '':
+            assert self.right is not None
+            assert self.left is not None
+            self.left.getCode(  codeMap, codeList=[x for x in codeList]+[0] )
+            self.right.getCode( codeMap, codeList=[x for x in codeList]+[1] )
         else:
-            self.curNode = self.curNode.right
-            assert isinstance(self.curNode, Node)
-            assert self.curNode.left is None
-            assert self.curNode.right is None
-            self.buildNode(key)
+            codeMap[self.content[1]] = codeList
 
 
+def makeTree(nodeList):
+    nodeList.sort(key=lambda x: x.content, reverse=True)
+    while len(nodeList) > 1 :
+        a = nodeList.pop()
+        b = nodeList.pop()
+        newNode = Node( (a.content[0]+b.content[0],'') )
+        newNode.left = min( a, b, key=lambda x: x.content )
+        newNode.right = max( a, b, key=lambda x: x.content ) 
+        nodeList.append(newNode)
+        nodeList.sort(key=lambda x: x.content, reverse=True)
+    return nodeList.pop()
 
-    def makeTree(self, sortedTupleList):
-        for byte, count in sortedTupleList:
-            self.buildNode((byte,count))  
+    
 
 
 
@@ -79,18 +59,31 @@ def count( byteGenerator ):
     return hashMap
 
 def tree( hashMap ):
-    my = sorted([(x,y) for x,y in hashMap.items()], key=lambda x: (x[1],x[0]), reverse=True)
-    myTree = Tree()  
-    myTree.makeTree(my)
+    nodeList=[]
+    for (key, value) in hashMap.items():
+        nodeList.append( Node((value, key)) )
+    myTree = makeTree( nodeList )
     return myTree
+
+def code( byteGenerator ):
+    hashMap = count(byteGenerator)
+    myTree = Tree()
+    myCode = myTree.getCode()
+    print(myCode)
+
+def encode( byteGenerator ):
+    hashMap=count(byteGenerator)
+    myTree=tree(hashMap)
 
 
 def main():
-    hashMap = count(lazyReader(sys.argv[1]))
-    print(tree(hashMap))
-    with open(sys.argv[1]+'.dict','w') as f:
-        f.write(pprint.pformat(hashMap))
-    
+    myByteGenerator = "aaaaaabbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccddddddddddddddeejjhffqq"
+    hashMap = count(myByteGenerator)
+    myTree = tree(hashMap)
+    my = {}
+    myTree.getCode(codeMap=my)
+    x=sorted([ (k,v) for k,v in my.items() ], key=lambda x : len(x[1]))
+    print(pprint.pformat(x))
         
 
 if __name__=='__main__':
