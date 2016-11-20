@@ -1,6 +1,7 @@
 import sys
 import pprint
-import copy
+import random
+import string
 
 class Node:
     
@@ -9,38 +10,44 @@ class Node:
         self.left = None
         self.right = None
 
-
     def __repr__(self):
-        return ("'{}'-----'{}'\n      |"
-        "        \n").format(self.content,self.left.content)
-
-
+        return str((self.content, self.right.content if self.right else None, self.left.content if self.left else None))
+    
+    
     def getCode(self, codeMap, codeList=[]):
-        if self.content[1] == '':
-            assert self.right is not None
-            assert self.left is not None
-            self.left.getCode(  codeMap, codeList=[x for x in codeList]+[0] )
-            self.right.getCode( codeMap, codeList=[x for x in codeList]+[1] )
-        else:
+        if self.content[1] != '':
             codeMap[self.content[1]] = codeList
+        else:
+            if self.left is not None:
+                self.left.getCode( codeMap, codeList=[x for x in codeList]+[0] )
+            if self.right is not None:
+                self.right.getCode( codeMap, codeList=[x for x in codeList]+[1] )
+            
 
+        
 
 def makeTree(nodeList):
     nodeList.sort(key=lambda x: x.content, reverse=True)
+
+    if len(nodeList)==1:
+        """ extra special case when the encoded buffer contains always the same byte.
+        Notice that it doesn't make sense for huffman coding"""
+        node = nodeList.pop()
+        newNode = Node( (node.content[0],'') )
+        newNode.right = node
+        return newNode
+        
     while len(nodeList) > 1 :
         a = nodeList.pop()
         b = nodeList.pop()
         newNode = Node( (a.content[0]+b.content[0],'') )
-        newNode.left = min( a, b, key=lambda x: x.content )
-        newNode.right = max( a, b, key=lambda x: x.content ) 
+        newNode.left, newNode.right = (a,b) if a.content>b.content else (b,a)
         nodeList.append(newNode)
         nodeList.sort(key=lambda x: x.content, reverse=True)
+        
     return nodeList.pop()
 
     
-
-
-
 def lazyReader(fname):
     f=open(fname)
     x = f.read(1)
@@ -65,26 +72,53 @@ def tree( hashMap ):
     myTree = makeTree( nodeList )
     return myTree
 
-def code( byteGenerator ):
-    hashMap = count(byteGenerator)
-    myTree = Tree()
-    myCode = myTree.getCode()
-    print(myCode)
 
-def encode( byteGenerator ):
-    hashMap=count(byteGenerator)
-    myTree=tree(hashMap)
+def encode( byteGenerator, hashmap ):
+    myCode={}
+    output = []
+    tree(hashmap).getCode(myCode)
+    
+    for x in byteGenerator:
+        output = output + myCode[x]
+        
+    return output
 
+def decode(codeTree, boolList):
+    """ the convention is 0: to the left, 1: to the right """
+    output = []
+    workTree = codeTree
+    for boolean in boolList:
+        workTree = workTree.right if boolean else workTree.left
+        
+        if workTree.content[1]!='':
+            output.append(workTree.content[1])
+            workTree=codeTree
+            
+    return output
 
 def main():
-    myByteGenerator = "aaaaaabbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccddddddddddddddeejjhffqq"
-    hashMap = count(myByteGenerator)
-    myTree = tree(hashMap)
-    my = {}
-    myTree.getCode(codeMap=my)
-    x=sorted([ (k,v) for k,v in my.items() ], key=lambda x : len(x[1]))
-    print(pprint.pformat(x))
+    byteStrings = [ "a"*random.randint(10,100),
+                    "aaaaaaaaaabc",
+                    "bbbbbbbbbba",
+                    "aaaaaaaabbbbbbbbbbbccccccccc",
+                    string.ascii_letters,
+                    string.ascii_letters+"aabb",
+                    ''.join(random.sample(string.ascii_letters,9)) ]
+    for testString in byteStrings:
+        test(testString)
         
-
+def test(testString):
+    codec = {}
+    hashmap = count(testString)
+    print("source : "+testString)
+    myTree = tree(hashmap)
+    assert myTree.content[0] == len(testString)
+    myTree.getCode(codec)
+    encodedBytes=encode(testString, hashmap)
+    decodedBytes=decode(myTree, encodedBytes)
+    print("decoded: "+''.join(decodedBytes))
+            
+    assert testString==''.join(decodedBytes)
+        
 if __name__=='__main__':
     main()
