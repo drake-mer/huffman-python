@@ -4,24 +4,35 @@ import random
 import string
 
 class Node:
-    
+    """ A Node is is a data structure made of 
+    - a character (the data)
+    - two pointers to another Node (left and right)
+    """
     def __init__(self, content):
         self.content = content
         self.left = None
         self.right = None
 
     def __repr__(self):
-        return str((self.content, self.right.content if self.right else None, self.left.content if self.left else None))
-    
+        return str(
+            # returns a string representation of a 3-uplet containing the data in the Node
+            (
+                self.content,  # the node content
+                self.right.content if self.right else None,  # right node content
+                self.left.content if self.left else None,    # left node content
+            )
+        )
     
     def getCode(self, codeMap, codeList=[]):
+        """
+        """
         if self.content[1] != '':
             codeMap[self.content[1]] = codeList
         else:
             if self.left is not None:
-                self.left.getCode( codeMap, codeList=[x for x in codeList]+[0] )
+                self.left.getCode(codeMap, codeList=[x for x in codeList]+[0])
             if self.right is not None:
-                self.right.getCode( codeMap, codeList=[x for x in codeList]+[1] )
+                self.right.getCode(codeMap, codeList=[x for x in codeList]+[1])
             
 
         
